@@ -1,0 +1,19 @@
+spring:
+  application:
+      name: code-generator-backend
+server:
+  port: 8123
+  servlet:
+    #???????/api??
+     context-path: /api
+# springdoc-openapi
+springdoc:
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.godfan.codegenerate.controller
+# knife4j???????????????
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
