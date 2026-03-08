@@ -3,7 +3,7 @@ import type { MenuProps } from 'ant-design-vue'
 import { ref, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
-import { LogoutOutlined } from '@ant-design/icons-vue'
+import { LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { userLogout } from '@/api/userController'
 import { message } from 'ant-design-vue'
 
@@ -25,8 +25,8 @@ const originItems = [
 ]
 
 // 过滤菜单项
-const filterMenus = (menus = [] as MenuProps['items']) => {
-  return menus?.filter((menu) => {
+const filterMenus = (menus: MenuProps['items'] = []) => {
+  return menus?.filter((menu: any) => {
     const menuKey = menu?.key as string
     if (menuKey?.startsWith('/admin')) {
       const loginUser = loginUserStore.loginUser
@@ -45,7 +45,7 @@ const menuItems = computed<MenuProps['items']>(() => filterMenus(originItems))
 const selectedKeys = ref<string[]>(['/'])
 
 // 处理菜单点击
-const handleMenuClick: MenuProps['onClick'] = (e) => {
+const handleMenuClick = (e: { key: string }) => {
   const key = e.key as string
   selectedKeys.value = [key]
   // 跳转到对应页面
@@ -74,6 +74,11 @@ const doLogout = async () => {
     message.error('退出登录失败，' + res.data.message)
   }
 }
+
+// 跳转到个人设置
+const goToSettings = () => {
+  router.push('/user/settings')
+}
 </script>
 
 <template>
@@ -100,6 +105,10 @@ const doLogout = async () => {
           </a-space>
           <template #overlay>
             <a-menu>
+              <a-menu-item @click="goToSettings">
+                <UserOutlined />
+                个人设置
+              </a-menu-item>
               <a-menu-item @click="doLogout">
                 <LogoutOutlined />
                 退出登录
