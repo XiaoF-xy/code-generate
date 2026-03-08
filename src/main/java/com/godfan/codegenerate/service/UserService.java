@@ -1,6 +1,7 @@
 package com.godfan.codegenerate.service;
 
 import com.godfan.codegenerate.model.dto.user.UserQueryRequest;
+import com.godfan.codegenerate.model.dto.user.UserUpdateMyRequest;
 import com.godfan.codegenerate.model.vo.LoginUserVO;
 import com.godfan.codegenerate.model.vo.UserVO;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -82,4 +83,13 @@ public interface UserService extends IService<User> {
      * @return
      */
     QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest);
+
+    /**
+     * 用户修改个人信息
+     *
+     * @param userUpdateMyRequest 用户更新个人信息请求
+     * @param loginUser           当前登录用户
+     * @return 是否修改成功
+     */
+    boolean userUpdateMy(UserUpdateMyRequest userUpdateMyRequest, User loginUser);
 }

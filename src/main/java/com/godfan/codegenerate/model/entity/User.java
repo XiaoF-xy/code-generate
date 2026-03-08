@@ -15,7 +15,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.crypto.KeyGenerator;
+
 
 /**
  * 用户 实体类。

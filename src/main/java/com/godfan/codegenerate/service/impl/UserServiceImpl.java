@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.godfan.codegenerate.exception.BusinessException;
 import com.godfan.codegenerate.exception.ErrorCode;
 import com.godfan.codegenerate.model.dto.user.UserQueryRequest;
+import com.godfan.codegenerate.model.dto.user.UserUpdateMyRequest;
 import com.godfan.codegenerate.model.enums.UserRoleEnum;
 import com.godfan.codegenerate.model.vo.LoginUserVO;
 import com.godfan.codegenerate.model.vo.UserVO;
@@ -180,5 +181,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
                 .like("userName", userName)
                 .like("userProfile", userProfile)
                 .orderBy(sortField, "ascend".equals(sortOrder));
+    }
+
+    @Override
+    public boolean userUpdateMy(UserUpdateMyRequest userUpdateMyRequest, User loginUser) {
+        if (userUpdateMyRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        User user = new User();
+        BeanUtil.copyProperties(userUpdateMyRequest, user);
+
+        // 如果修改了密码，需要验证原密码
+        if (StrUtil.isNotBlank(userUpdateMyRequest.getUserPassword())) {
+            // 验证原密码
+            if (StrUtil.isBlank(userUpdateMyRequest.getOldPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "原密码不能为空");
+            }
+            String oldEncryptPassword = getEncryptPassword(userUpdateMyRequest.getOldPassword());
+            if (!oldEncryptPassword.equals(loginUser.getUserPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "原密码错误");
+            }
+            // 设置新密码
+            String newEncryptPassword = getEncryptPassword(userUpdateMyRequest.getUserPassword());
+            user.setUserPassword(newEncryptPassword);
+        }
+
+        // 设置用户 ID
+        user.setId(loginUser.getId());
+
+        // 更新用户信息
+        boolean result = this.updateById(user);
+        if (!result) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "修改失败");
+        }
+        return true;
     }
 }
