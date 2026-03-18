@@ -2,6 +2,7 @@ package com.godfan.codegenerate.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.godfan.codegenerate.annotation.AuthCheck;
 import com.godfan.codegenerate.common.BaseResponse;
 import com.godfan.codegenerate.common.DeleteRequest;
@@ -25,10 +26,15 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 应用 控制层。
@@ -44,6 +50,44 @@ public class AppController {
 
     @Resource
     private UserService userService;
+
+    /**
+     * 应用聊天生成代码（流式 SSE）
+     * produces = MediaType.TEXT_EVENT_STREAM_VALUE 流式声明
+     * @param appId   应用 ID
+     * @param message 用户消息
+     * @param request 请求对象
+     * @return 生成结果流
+     */
+    @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
+                                      @RequestParam String message,
+                                      HttpServletRequest request) {
+        // 参数校验
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID无效");
+        ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        // 调用服务生成代码（流式返回）
+        Flux<String> contentFlux = appService.chatToGenCode(appId, message, loginUser);
+        // 转换为 ServerSentEvent 格式
+        return contentFlux
+                .map(chunk -> {
+                    // 将内容包装成JSON对象
+                    Map<String, String> wrapper = Map.of("d", chunk);
+                    String jsonData = JSONUtil.toJsonStr(wrapper);
+                    return ServerSentEvent.<String>builder()
+                            .data(jsonData)
+                            .build();
+                })
+                .concatWith(Mono.just(
+                        // 发送结束事件
+                        ServerSentEvent.<String>builder()
+                                .event("done")
+                                .data("")
+                                .build()
+                ));
+    }
 
     /**
      * 创建应用
@@ -279,36 +323,4 @@ public class AppController {
         // 获取封装类
         return ResultUtils.success(appService.getAppVO(app));
     }
-    /**
-     * 查询所有应用。
-     *
-     * @return 所有数据
-     */
-    @GetMapping("list")
-    public List<App> list() {
-        return appService.list();
-    }
-
-    /**
-     * 根据主键获取应用。
-     *
-     * @param id 应用主键
-     * @return 应用详情
-     */
-    @GetMapping("getInfo/{id}")
-    public App getInfo(@PathVariable Long id) {
-        return appService.getById(id);
-    }
-
-    /**
-     * 分页查询应用。
-     *
-     * @param page 分页对象
-     * @return 分页对象
-     */
-    @GetMapping("page")
-    public Page<App> page(Page<App> page) {
-        return appService.page(page);
-    }
-
 }
