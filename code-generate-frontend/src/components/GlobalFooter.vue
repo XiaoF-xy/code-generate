@@ -1,23 +1,37 @@
-<script setup lang="ts"></script>
-
 <template>
-  <div class="footer">
-    <div class="copyright">607 宿舍开发</div>
-  </div>
+  <a-layout-footer class="footer">
+    <div class="footer-content">
+      <p class="copyright">
+        <a
+          href="https://www.codefather.cn"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="author-link"
+        >
+          by上海海洋大学宿舍607
+        </a>
+      </p>
+    </div>
+  </a-layout-footer>
 </template>
+
+<script setup lang="ts">
+// 无需额外的响应式数据
+</script>
 
 <style scoped>
 .footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  background: #f0f2f5;
-  color: rgba(0, 0, 0, 0.65);
-  font-size: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  padding: 20px;
+  margin-top: 40px;
+  border-top: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .copyright {
-  text-align: center;
+  margin: 0;
+  color: #666;
+  font-size: 14px;
 }
 </style>
