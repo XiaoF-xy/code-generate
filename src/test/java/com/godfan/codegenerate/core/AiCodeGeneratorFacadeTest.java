@@ -1,5 +1,7 @@
 package com.godfan.codegenerate.core;
 
+import com.godfan.codegenerate.ai.AiCodeGeneratorService;
+import com.godfan.codegenerate.ai.model.HtmlCodeResult;
 import com.godfan.codegenerate.model.enums.CodeGenTypeEnum;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
@@ -15,6 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class AiCodeGeneratorFacadeTest {
     @Resource
     AiCodeGeneratorFacade aiCodeGeneratorFacade;
+
+    @Resource
+    AiCodeGeneratorService aiCodeGeneratorService;
     @Test
     void generateAndSaveCode() {
         File file = aiCodeGeneratorFacade.generateAndSaveCode("生成一个登录页面,总共不超过20行代码", CodeGenTypeEnum.MULTI_FILE,1L);
@@ -29,5 +34,17 @@ class AiCodeGeneratorFacadeTest {
         Assertions.assertNotNull(result);
         String completeContent = String.join("", result);
         Assertions.assertNotNull(completeContent);
+    }
+
+    @Test
+    void testChatMemory() {
+        HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode("做个程序员鱼皮的工具网站，总代码量不超过 20 行");
+        Assertions.assertNotNull(result);
+        result = aiCodeGeneratorService.generateHtmlCode( "不要生成网站，告诉我你刚刚做了什么？");
+        Assertions.assertNotNull(result);
+        result = aiCodeGeneratorService.generateHtmlCode( "做个程序员鱼皮的工具网站，总代码量不超过 20 行");
+        Assertions.assertNotNull(result);
+        result = aiCodeGeneratorService.generateHtmlCode("不要生成网站，告诉我你刚刚做了什么？");
+        Assertions.assertNotNull(result);
     }
 }
