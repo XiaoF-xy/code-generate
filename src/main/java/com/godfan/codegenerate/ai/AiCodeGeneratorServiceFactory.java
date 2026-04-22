@@ -3,8 +3,13 @@ package com.godfan.codegenerate.ai;
 import cn.hutool.ai.core.AIService;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.godfan.codegenerate.ai.tools.FileWriterTool;
+import com.godfan.codegenerate.exception.BusinessException;
+import com.godfan.codegenerate.exception.ErrorCode;
+import com.godfan.codegenerate.model.enums.CodeGenTypeEnum;
 import com.godfan.codegenerate.service.ChatHistoryService;
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -26,13 +31,16 @@ public class AiCodeGeneratorServiceFactory {
     private ChatModel chatModel;
 
     @Resource
-    private StreamingChatModel  streamingChatModel;
+    private StreamingChatModel  openAiStreamingChatModel;
 
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private  StreamingChatModel reasoningStreamingChatModel;
 
     /**
      * AI 服务实例缓存
@@ -41,26 +49,36 @@ public class AiCodeGeneratorServiceFactory {
      * - 写入后 30 分钟过期
      * - 访问后 10 分钟过期
      */
-    private final Cache<Long, AiCodeGeneratorService> serviceCache = Caffeine.newBuilder()
+    private final Cache<String, AiCodeGeneratorService> serviceCache = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(Duration.ofMinutes(30))
             .expireAfterAccess(Duration.ofMinutes(10))
             .removalListener((key, value, cause) -> {
-                log.debug("AI 服务实例被移除，appId: {}, 原因: {}", key, cause);
+                log.debug("AI 服务实例被移除，缓存键: {}, 原因: {}", key, cause);
             })
             .build();
 
+
     /**
-     * 根据 appId 获取服务（带缓存）
+     * 根据 appId 获取服务（带缓存）这个方法是为了兼容历史逻辑
      */
     public AiCodeGeneratorService getAiCodeGeneratorService(long appId) {
-        return serviceCache.get(appId, this::createAiCodeGeneratorService); // 现在缓存里面找有没有对应appid的service如果有就从缓存里面拿，没有就调用对应的创建服务方法
+        return getAiCodeGeneratorService(appId, CodeGenTypeEnum.HTML);
+    }
+    /**
+     * 根据 appId 和代码生成类型获取服务（带缓存）
+     */
+    public AiCodeGeneratorService getAiCodeGeneratorService(long appId, CodeGenTypeEnum codeGenType) {
+        String cacheKey = buildCacheKey(appId, codeGenType);
+        return serviceCache.get(cacheKey, key -> createAiCodeGeneratorService(appId, codeGenType));
     }
 
     /**
      * 创建新的 AI 服务实例
+     * @param appId 应用id
+     * @param codeGenTypeEnum 代码生成类型
      */
-    private AiCodeGeneratorService createAiCodeGeneratorService(long appId) {
+    private AiCodeGeneratorService createAiCodeGeneratorService(long appId, CodeGenTypeEnum codeGenTypeEnum) {
         log.info("为 appId: {} 创建新的 AI 服务实例", appId);
         // 根据 appId 构建独立的对话记忆
         MessageWindowChatMemory chatMemory = MessageWindowChatMemory
@@ -70,12 +88,27 @@ public class AiCodeGeneratorServiceFactory {
                 .maxMessages(20)
                 .build();
         //从数据库中加载对话历史到记忆中
-        int count = chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
-        return AiServices.builder(AiCodeGeneratorService.class)
-                .chatModel(chatModel)
-                .streamingChatModel(streamingChatModel)
-                .chatMemory(chatMemory)
-                .build();
+        chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
+        return switch (codeGenTypeEnum){
+            //Vue项目生成，使用工具调用和推理模型
+            case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
+                    .chatModel(chatModel)
+                    .streamingChatModel(reasoningStreamingChatModel)
+                    .chatMemoryProvider(memoryId -> chatMemory)
+                    .tools(new FileWriterTool())
+                    //处理工具调用幻觉问题
+                    .hallucinatedToolNameStrategy(toolExecutionRequest ->
+                            ToolExecutionResultMessage.from( toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name())
+                            )
+                    .build();
+            //HTML 和 多文件生成，使用流式对话模型
+            case HTML,MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
+                    .chatModel(chatModel)
+                    .streamingChatModel(openAiStreamingChatModel)
+                    .chatMemory(chatMemory)
+                    .build();
+            default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,"不支持的文件生成类型"+codeGenTypeEnum.getValue());
+        };
     }
 
     /**
@@ -86,5 +119,12 @@ public class AiCodeGeneratorServiceFactory {
     @Bean
     public AiCodeGeneratorService createAiCodeGeneratorService() {
         return getAiCodeGeneratorService(0);
+    }
+
+    /**
+     * 构建缓存键
+     */
+    private String buildCacheKey(long appId, CodeGenTypeEnum codeGenType) {
+        return appId + "_" + codeGenType.getValue();
     }
 }
