@@ -3,7 +3,7 @@ package com.godfan.codegenerate.ai;
 import cn.hutool.ai.core.AIService;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.godfan.codegenerate.ai.tools.FileWriterTool;
+import com.godfan.codegenerate.ai.tools.*;
 import com.godfan.codegenerate.exception.BusinessException;
 import com.godfan.codegenerate.exception.ErrorCode;
 import com.godfan.codegenerate.model.enums.CodeGenTypeEnum;
@@ -41,6 +41,9 @@ public class AiCodeGeneratorServiceFactory {
 
     @Resource
     private  StreamingChatModel reasoningStreamingChatModel;
+
+    @Resource
+    private ToolManager toolManager;
 
     /**
      * AI 服务实例缓存
@@ -95,7 +98,7 @@ public class AiCodeGeneratorServiceFactory {
                     .chatModel(chatModel)
                     .streamingChatModel(reasoningStreamingChatModel)
                     .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(new FileWriterTool())
+                    .tools(toolManager.getAllTools())
                     //处理工具调用幻觉问题
                     .hallucinatedToolNameStrategy(toolExecutionRequest ->
                             ToolExecutionResultMessage.from( toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name())
