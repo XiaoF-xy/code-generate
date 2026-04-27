@@ -111,10 +111,8 @@ public class CodeGenConcurrentWorkflow {
                 .build();
         for (NodeOutput<MessagesState<String>> step : workflow.stream(
                 Map.of(WorkflowContext.WORKFLOW_CONTEXT_KEY, initialContext),
-                runnableConfig)) {}
-        for (NodeOutput<MessagesState<String>> step : workflow.stream(
-                Map.of(WorkflowContext.WORKFLOW_CONTEXT_KEY, initialContext)
-        )) {
+                runnableConfig))
+        {
             log.info("--- 第 {} 步完成 ---", stepCounter);
             WorkflowContext currentContext = WorkflowContext.getContext(step.state());
             if (currentContext != null) {
