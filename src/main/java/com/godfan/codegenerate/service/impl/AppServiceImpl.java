@@ -6,6 +6,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.godfan.codegenerate.ai.AiCodeGenTypeRoutingService;
+import com.godfan.codegenerate.ai.AiCodeGenTypeRoutingServiceFactory;
 import com.godfan.codegenerate.constant.AppConstant;
 import com.godfan.codegenerate.core.AiCodeGeneratorFacade;
 import com.godfan.codegenerate.core.builder.VueProjectBuilder;
@@ -69,7 +70,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private ScreenshotService screenshotService;
 
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -171,8 +172,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
-        // 使用 AI 智能选择代码生成类型
-        CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        // 使用 AI 智能选择代码生成类型（多例模式）
+        AiCodeGenTypeRoutingService routingService = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
+        CodeGenTypeEnum selectedCodeGenType = routingService.routeCodeGenType(initPrompt);
         app.setCodeGenType(selectedCodeGenType.getValue());
         // 插入数据库
         boolean result = this.save(app);
