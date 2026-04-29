@@ -3,6 +3,7 @@ package com.godfan.codegenerate.ai;
 import cn.hutool.ai.core.AIService;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.godfan.codegenerate.ai.guardrail.PromptSafetyInputGuardrail;
 import com.godfan.codegenerate.ai.tools.*;
 import com.godfan.codegenerate.exception.BusinessException;
 import com.godfan.codegenerate.exception.ErrorCode;
@@ -101,6 +102,7 @@ public class AiCodeGeneratorServiceFactory {
                     .hallucinatedToolNameStrategy(toolExecutionRequest ->
                             ToolExecutionResultMessage.from( toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name())
                             )
+                    .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
                     .build();
             }
             //HTML 和 多文件生成，使用流式对话模型
@@ -111,6 +113,7 @@ public class AiCodeGeneratorServiceFactory {
                     .chatModel(chatModel)
                     .streamingChatModel(openAiStreamingChatModel)
                     .chatMemory(chatMemory)
+                    .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
                     .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,"不支持的文件生成类型"+codeGenTypeEnum.getValue());
