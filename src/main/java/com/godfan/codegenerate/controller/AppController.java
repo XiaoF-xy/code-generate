@@ -18,6 +18,8 @@ import com.godfan.codegenerate.model.entity.App;
 import com.godfan.codegenerate.model.entity.User;
 import com.godfan.codegenerate.model.enums.CodeGenTypeEnum;
 import com.godfan.codegenerate.model.vo.AppVO;
+import com.godfan.codegenerate.ratelimiter.annotation.RateLimit;
+import com.godfan.codegenerate.ratelimiter.enums.RateLimitType;
 import com.godfan.codegenerate.service.AppService;
 import com.godfan.codegenerate.service.ProjectDownloadService;
 import com.godfan.codegenerate.service.UserService;
@@ -67,6 +69,7 @@ public class AppController {
      * @return 生成结果流
      */
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(limitType = RateLimitType.USER, rate = 5, rateInterval = 60, message = "AI 对话请求过于频繁，请稍后再试")
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                       @RequestParam String message,
                                       HttpServletRequest request) {
